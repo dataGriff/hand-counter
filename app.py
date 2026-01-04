@@ -17,6 +17,13 @@ from hand_counter import HandCounter
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Marker sizing constants
+MARKER_MAX_RADIUS = 25
+MARKER_MIN_RADIUS_DIVISOR = 6
+MARKER_OFFSET_MAX = 40
+MARKER_OFFSET_DIVISOR = 4
+MARKER_OFFSET_PADDING = 10
+
 
 def annotate_image(image, detections):
     """
@@ -32,8 +39,11 @@ def annotate_image(image, detections):
     annotated = image.copy()
     
     for detection in detections:
-        bbox = detection['bbox']
-        hands_raised = detection['hands_raised']
+        bbox = detection.get('bbox')
+        if not bbox or len(bbox) != 4:
+            continue  # Skip invalid bounding boxes
+            
+        hands_raised = detection.get('hands_raised', False)
         
         x, y, w, h = bbox
         
@@ -43,8 +53,9 @@ def annotate_image(image, detections):
         
         # Calculate marker position (top-right corner of bounding box)
         # Use relative positioning based on bounding box size
-        marker_radius = min(25, min(w, h) // 6)
-        marker_offset = max(marker_radius + 10, min(40, w // 4))
+        marker_radius = min(MARKER_MAX_RADIUS, min(w, h) // MARKER_MIN_RADIUS_DIVISOR)
+        marker_offset = max(marker_radius + MARKER_OFFSET_PADDING, 
+                           min(MARKER_OFFSET_MAX, w // MARKER_OFFSET_DIVISOR))
         marker_x = x + w - marker_offset
         marker_y = y + marker_offset
         

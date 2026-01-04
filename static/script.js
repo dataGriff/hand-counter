@@ -98,6 +98,7 @@ function resetUpload() {
     resultsSection.style.display = 'none';
     errorSection.style.display = 'none';
     loading.style.display = 'none';
+    document.getElementById('annotatedImageSection').style.display = 'none';
 }
 
 // Analyze image
