@@ -18,6 +18,68 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 
+def annotate_image(image, detections):
+    """
+    Annotate image with bounding boxes and markers for raised/not raised hands.
+    
+    Args:
+        image: OpenCV image (BGR format)
+        detections: List of detection dicts with 'bbox' and 'hands_raised' keys
+        
+    Returns:
+        Annotated OpenCV image
+    """
+    annotated = image.copy()
+    
+    for detection in detections:
+        bbox = detection['bbox']
+        hands_raised = detection['hands_raised']
+        
+        x, y, w, h = bbox
+        
+        # Draw bounding box
+        box_color = (0, 255, 0) if hands_raised else (0, 0, 255)  # Green for raised, red for down
+        cv2.rectangle(annotated, (x, y), (x + w, y + h), box_color, 3)
+        
+        # Calculate marker position (top-right corner of bounding box)
+        marker_x = x + w - 40
+        marker_y = y + 40
+        marker_radius = 25
+        
+        if hands_raised:
+            # Draw green circle background
+            cv2.circle(annotated, (marker_x, marker_y), marker_radius, (0, 200, 0), -1)
+            cv2.circle(annotated, (marker_x, marker_y), marker_radius, (0, 255, 0), 2)
+            
+            # Draw checkmark (tick)
+            # Short line of checkmark
+            cv2.line(annotated, 
+                    (marker_x - 10, marker_y), 
+                    (marker_x - 3, marker_y + 10), 
+                    (255, 255, 255), 4)
+            # Long line of checkmark
+            cv2.line(annotated, 
+                    (marker_x - 3, marker_y + 10), 
+                    (marker_x + 10, marker_y - 10), 
+                    (255, 255, 255), 4)
+        else:
+            # Draw red circle background
+            cv2.circle(annotated, (marker_x, marker_y), marker_radius, (0, 0, 200), -1)
+            cv2.circle(annotated, (marker_x, marker_y), marker_radius, (0, 0, 255), 2)
+            
+            # Draw X (cross)
+            cv2.line(annotated, 
+                    (marker_x - 10, marker_y - 10), 
+                    (marker_x + 10, marker_y + 10), 
+                    (255, 255, 255), 4)
+            cv2.line(annotated, 
+                    (marker_x - 10, marker_y + 10), 
+                    (marker_x + 10, marker_y - 10), 
+                    (255, 255, 255), 4)
+    
+    return annotated
+
+
 @app.route('/')
 def index():
     """Render the main page."""
@@ -62,10 +124,18 @@ def analyze_image():
         counter = HandCounter()
         results = counter.process_image(temp_path)
         
+        # Annotate the image with markers
+        annotated_image = annotate_image(image, results.get('detections', []))
+        
+        # Convert annotated image to base64
+        _, buffer = cv2.imencode('.jpg', annotated_image)
+        annotated_base64 = base64.b64encode(buffer).decode('utf-8')
+        
         # Return results as JSON
         return jsonify({
             'success': True,
-            'results': results
+            'results': results,
+            'annotated_image': f'data:image/jpeg;base64,{annotated_base64}'
         })
         
     except Exception as e:

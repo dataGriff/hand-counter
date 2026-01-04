@@ -130,7 +130,7 @@ async function analyzeImage() {
         loading.style.display = 'none';
         
         // Display results
-        displayResults(data.results);
+        displayResults(data.results, data.annotated_image);
         
     } catch (error) {
         loading.style.display = 'none';
@@ -139,7 +139,7 @@ async function analyzeImage() {
 }
 
 // Display results
-function displayResults(results) {
+function displayResults(results, annotatedImage) {
     // Update stats
     document.getElementById('totalPeople').textContent = results.total_people;
     document.getElementById('handsRaised').textContent = results.hands_raised;
@@ -157,6 +157,16 @@ function displayResults(results) {
     
     document.getElementById('proportionRaisedText').textContent = raisedPercent.toFixed(1) + '%';
     document.getElementById('proportionDownText').textContent = downPercent.toFixed(1) + '%';
+    
+    // Display annotated image if available
+    const annotatedImageSection = document.getElementById('annotatedImageSection');
+    const annotatedImageElement = document.getElementById('annotatedImage');
+    if (annotatedImage) {
+        annotatedImageElement.src = annotatedImage;
+        annotatedImageSection.style.display = 'block';
+    } else {
+        annotatedImageSection.style.display = 'none';
+    }
     
     // Show results
     resultsSection.style.display = 'block';

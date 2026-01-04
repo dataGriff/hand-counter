@@ -111,7 +111,7 @@ class HandCounter:
             image_path: Path to the image file
             
         Returns:
-            dict: Results containing counts and proportions
+            dict: Results containing counts and proportions, plus detection details
         """
         # Load image
         image = cv2.imread(str(image_path))
@@ -140,11 +140,19 @@ class HandCounter:
         
         total_people = len(boxes)
         hands_raised_count = 0
+        detections = []
         
         # Analyze each detected person
         for bbox in boxes:
-            if self.detect_raised_hands_heuristic(image, bbox):
+            hands_raised = self.detect_raised_hands_heuristic(image, bbox)
+            if hands_raised:
                 hands_raised_count += 1
+            
+            # Store detection details (convert numpy types to Python native types)
+            detections.append({
+                'bbox': [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
+                'hands_raised': bool(hands_raised)
+            })
         
         # Calculate proportions
         hands_raised_proportion = (hands_raised_count / total_people * 100 
@@ -156,7 +164,8 @@ class HandCounter:
             'hands_raised': hands_raised_count,
             'hands_down': total_people - hands_raised_count,
             'hands_raised_proportion': hands_raised_proportion,
-            'hands_down_proportion': hands_down_proportion
+            'hands_down_proportion': hands_down_proportion,
+            'detections': detections
         }
 
 
