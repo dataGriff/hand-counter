@@ -81,6 +81,17 @@ Proportions:
 
 ## Deployment
 
+### 🚀 Free & Easy Deployment (Recommended)
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for detailed step-by-step guides to deploy for free on:
+
+- **Render** (Recommended) - One-click deploy from GitHub
+- **Railway** - Simple deployment with $5 free credit
+- **Fly.io** - Global edge deployment
+- **PythonAnywhere** - Python-focused hosting
+
+All options include free HTTPS and are perfect for personal projects!
+
 ### Local Development
 
 ```bash
