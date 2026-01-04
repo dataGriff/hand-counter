@@ -13,6 +13,20 @@ from pathlib import Path
 class HandCounter:
     """Counts people and raised hands in images using pose estimation."""
     
+    # Hand detection heuristic constants
+    TOP_REGION_PCT = 0.15  # Top 15% of bbox where raised hands would be
+    HEAD_REGION_START_PCT = 0.15  # Start of head region
+    HEAD_REGION_END_PCT = 0.35  # End of head region
+    
+    # Thresholds for hand detection
+    MIN_EDGE_DENSITY = 0.008  # Minimum edge density to indicate presence of content
+    MAX_BRIGHTNESS = 220  # Maximum mean brightness (below this = has content, not background)
+    RATIO_THRESHOLD = 0.75  # Threshold for edge and variance ratios
+    
+    # Safety thresholds to avoid division by zero
+    MIN_HEAD_EDGE_DENSITY = 0.001
+    MIN_HEAD_VARIANCE = 1
+    
     def __init__(self):
         """Initialize OpenCV DNN with a pre-trained person detection model."""
         # For simplicity, we'll use OpenCV's HOG detector and simple heuristics
@@ -47,13 +61,13 @@ class HandCounter:
             return False
         
         # Define two regions for comparison:
-        # - Top 15%: where raised hands/arms would be
-        # - Head region (15-35%): where the head typically is
-        top_height = max(1, int(h * 0.15))
+        # - Top region: where raised hands/arms would be
+        # - Head region: where the head typically is
+        top_height = max(1, int(h * self.TOP_REGION_PCT))
         top_region = image[y:y+top_height, x:x+w]
         
-        head_start = int(h * 0.15)
-        head_end = int(h * 0.35)
+        head_start = int(h * self.HEAD_REGION_START_PCT)
+        head_end = int(h * self.HEAD_REGION_END_PCT)
         head_region = image[y+head_start:y+head_end, x:x+w]
         
         if top_region.size == 0 or head_region.size == 0:
@@ -75,7 +89,7 @@ class HandCounter:
         top_mean = np.mean(top_gray)
         
         # Avoid division by zero
-        if head_edge_density < 0.001 or head_variance < 1:
+        if head_edge_density < self.MIN_HEAD_EDGE_DENSITY or head_variance < self.MIN_HEAD_VARIANCE:
             return False
         
         # Calculate ratios
@@ -86,12 +100,12 @@ class HandCounter:
         # When hands are raised, the top region has thinner content (arms/hands)
         # compared to the dense head region, resulting in lower ratios.
         # Both conditions must be met to reduce false positives.
-        has_min_activity = top_edge_density > 0.008 and top_mean < 220
+        has_min_activity = top_edge_density > self.MIN_EDGE_DENSITY and top_mean < self.MAX_BRIGHTNESS
         
         return (
             has_min_activity and
-            edge_ratio < 0.75 and
-            variance_ratio < 0.75
+            edge_ratio < self.RATIO_THRESHOLD and
+            variance_ratio < self.RATIO_THRESHOLD
         )
     
     def non_max_suppression(self, boxes, weights, overlap_threshold=0.35):
