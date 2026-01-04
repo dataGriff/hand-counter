@@ -2,6 +2,8 @@
 
 An intelligent image analysis application that counts the number of people in an image and detects how many have their hands raised. Provides detailed statistics including counts and proportions.
 
+Available as both a **CLI tool** and a **web application**.
+
 ## Features
 
 - 📷 Processes images to detect people
@@ -9,12 +11,15 @@ An intelligent image analysis application that counts the number of people in an
 - 📊 Calculates proportions of people with hands raised vs. hands down
 - 🎯 Supports multiple people in a single image
 - 💻 Simple command-line interface
+- 🌐 Stateless web application for easy deployment
 
 ## Requirements
 
 - Python 3.7 or higher
 - OpenCV
 - NumPy
+- Flask (for web app)
+- Pillow (for web app)
 
 ## Installation
 
@@ -31,13 +36,29 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Basic Usage
+### Web Application (Recommended)
+
+Start the web server:
+
+```bash
+python app.py
+```
+
+Then open your browser to `http://localhost:5000`
+
+The web application provides:
+- Drag-and-drop or click-to-upload interface
+- Real-time image analysis
+- Visual results with charts and statistics
+- **Completely stateless** - no images are stored on the server
+
+### Command Line Interface
 
 ```bash
 python hand_counter.py path/to/image.jpg
 ```
 
-### Example Output
+### Example Output (CLI)
 
 ```
 Processing image: photo.jpg
@@ -58,6 +79,63 @@ Proportions:
 ==================================================
 ```
 
+## Deployment
+
+### Local Development
+
+```bash
+python app.py
+```
+
+### Production Deployment
+
+For production deployment, use a WSGI server like Gunicorn:
+
+```bash
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:8000 app:app
+```
+
+### Docker Deployment
+
+Create a `Dockerfile`:
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]
+```
+
+Build and run:
+
+```bash
+docker build -t hand-counter .
+docker run -p 8000:8000 hand-counter
+```
+
+### Cloud Deployment
+
+The application can be deployed to various cloud platforms:
+
+- **Heroku**: Add a `Procfile` with `web: gunicorn app:app`
+- **Google Cloud Run**: Use the Dockerfile above
+- **AWS Elastic Beanstalk**: Deploy as a Python application
+- **Azure App Service**: Deploy as a Python web app
+
 ## How It Works
 
 1. **Person Detection**: The application uses OpenCV's HOG (Histogram of Oriented Gradients) detector to identify people in the image.
@@ -71,6 +149,14 @@ Proportions:
    - Number of people with hands raised
    - Number of people with hands down
    - Percentage proportions of each
+
+## Stateless Architecture
+
+The web application is designed to be completely stateless:
+- Images are processed in memory only
+- No files are saved to disk (except temporary processing)
+- No database or persistent storage required
+- Easily scalable horizontally
 
 ## Limitations
 
@@ -86,6 +172,7 @@ Proportions:
 - Employs edge detection and density analysis for raised hand detection
 - Processes images in BGR color space
 - Configurable detection parameters for different scenarios
+- Flask-based REST API for web interface
 
 ## Contributing
 

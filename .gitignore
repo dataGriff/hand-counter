@@ -49,3 +49,7 @@ results/
 *.png
 !example*.png
 !test*.jpg
+
+# Flask
+instance/
+.webassets-cache

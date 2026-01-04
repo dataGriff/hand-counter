@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Counter - Analyze People and Raised Hands</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🙋 Hand Counter</h1>
+            <p class="subtitle">Count people and raised hands in your images</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="imageInput" accept="image/*" hidden>
+                    <div class="upload-content">
+                        <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <h2>Click to upload or drag and drop</h2>
+                        <p>PNG, JPG, JPEG up to 16MB</p>
+                    </div>
+                </div>
+                
+                <div class="preview-section" id="previewSection" style="display: none;">
+                    <img id="imagePreview" alt="Preview">
+                    <button class="btn btn-secondary" id="clearBtn">Choose Different Image</button>
+                </div>
+
+                <button class="btn btn-primary" id="analyzeBtn" style="display: none;">
+                    Analyze Image
+                </button>
+            </div>
+
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing image...</p>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h2>Results</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value" id="totalPeople">0</div>
+                        <div class="stat-label">Total People</div>
+                    </div>
+                    
+                    <div class="stat-card highlight">
+                        <div class="stat-icon">🙋</div>
+                        <div class="stat-value" id="handsRaised">0</div>
+                        <div class="stat-label">Hands Raised</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">🙅</div>
+                        <div class="stat-value" id="handsDown">0</div>
+                        <div class="stat-label">Hands Down</div>
+                    </div>
+                </div>
+
+                <div class="proportions">
+                    <h3>Proportions</h3>
+                    <div class="proportion-bar">
+                        <div class="proportion-raised" id="proportionRaisedBar">
+                            <span id="proportionRaisedText">0%</span>
+                        </div>
+                        <div class="proportion-down" id="proportionDownBar">
+                            <span id="proportionDownText">0%</span>
+                        </div>
+                    </div>
+                    <div class="proportion-legend">
+                        <div class="legend-item">
+                            <span class="legend-color raised"></span>
+                            <span>Hands Raised</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color down"></span>
+                            <span>Hands Down</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-secondary" id="analyzeAnotherBtn">
+                    Analyze Another Image
+                </button>
+            </div>
+
+            <div class="error-section" id="errorSection" style="display: none;">
+                <div class="error-message">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3>Error</h3>
+                    <p id="errorMessage"></p>
+                    <button class="btn btn-secondary" id="retryBtn">Try Again</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Hand Counter uses OpenCV HOG detector for person detection and edge analysis for raised hand detection.</p>
+            <p>No images are stored on the server - all processing is done in memory.</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
