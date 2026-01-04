@@ -53,31 +53,33 @@ def annotate_image(image, detections):
             cv2.circle(annotated, (marker_x, marker_y), marker_radius, (0, 200, 0), -1)
             cv2.circle(annotated, (marker_x, marker_y), marker_radius, (0, 255, 0), 2)
             
-            # Draw checkmark (tick)
+            # Draw checkmark (tick) - scaled relative to marker radius
+            tick_size = int(marker_radius * 0.6)
             # Short line of checkmark
             cv2.line(annotated, 
-                    (marker_x - 10, marker_y), 
-                    (marker_x - 3, marker_y + 10), 
-                    (255, 255, 255), 4)
+                    (marker_x - tick_size // 2, marker_y), 
+                    (marker_x - tick_size // 6, marker_y + tick_size // 2), 
+                    (255, 255, 255), max(2, marker_radius // 8))
             # Long line of checkmark
             cv2.line(annotated, 
-                    (marker_x - 3, marker_y + 10), 
-                    (marker_x + 10, marker_y - 10), 
-                    (255, 255, 255), 4)
+                    (marker_x - tick_size // 6, marker_y + tick_size // 2), 
+                    (marker_x + tick_size // 2, marker_y - tick_size // 2), 
+                    (255, 255, 255), max(2, marker_radius // 8))
         else:
             # Draw red circle background
             cv2.circle(annotated, (marker_x, marker_y), marker_radius, (0, 0, 200), -1)
             cv2.circle(annotated, (marker_x, marker_y), marker_radius, (0, 0, 255), 2)
             
-            # Draw X (cross)
+            # Draw X (cross) - scaled relative to marker radius
+            cross_size = int(marker_radius * 0.6)
             cv2.line(annotated, 
-                    (marker_x - 10, marker_y - 10), 
-                    (marker_x + 10, marker_y + 10), 
-                    (255, 255, 255), 4)
+                    (marker_x - cross_size // 2, marker_y - cross_size // 2), 
+                    (marker_x + cross_size // 2, marker_y + cross_size // 2), 
+                    (255, 255, 255), max(2, marker_radius // 8))
             cv2.line(annotated, 
-                    (marker_x - 10, marker_y + 10), 
-                    (marker_x + 10, marker_y - 10), 
-                    (255, 255, 255), 4)
+                    (marker_x - cross_size // 2, marker_y + cross_size // 2), 
+                    (marker_x + cross_size // 2, marker_y - cross_size // 2), 
+                    (255, 255, 255), max(2, marker_radius // 8))
     
     return annotated
 
