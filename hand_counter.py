@@ -13,10 +13,14 @@ from pathlib import Path
 class HandCounter:
     """Counts people and raised hands in images using pose estimation."""
     
-    # Hand detection heuristic constants
+    # Hand detection heuristic region definitions
     TOP_REGION_PCT = 0.15  # Top 15% of bbox where raised hands would be
-    HEAD_REGION_START_PCT = 0.15  # Start of head region
-    HEAD_REGION_END_PCT = 0.35  # End of head region
+    HEAD_REGION_START_PCT = 0.15  # Start of head region (15%)
+    HEAD_REGION_END_PCT = 0.35  # End of head region (35%)
+    
+    # Edge detection parameters
+    CANNY_THRESHOLD_LOW = 30  # Lower threshold for Canny edge detection
+    CANNY_THRESHOLD_HIGH = 100  # Upper threshold for Canny edge detection
     
     # Thresholds for hand detection
     MIN_EDGE_DENSITY = 0.008  # Minimum edge density to indicate presence of content
@@ -26,6 +30,7 @@ class HandCounter:
     # Safety thresholds to avoid division by zero
     MIN_HEAD_EDGE_DENSITY = 0.001
     MIN_HEAD_VARIANCE = 1
+    MIN_REGION_HEIGHT = 1  # Minimum height for a region to be valid
     
     def __init__(self):
         """Initialize OpenCV DNN with a pre-trained person detection model."""
@@ -61,13 +66,18 @@ class HandCounter:
             return False
         
         # Define two regions for comparison:
-        # - Top region: where raised hands/arms would be
-        # - Head region: where the head typically is
-        top_height = max(1, int(h * self.TOP_REGION_PCT))
+        # - Top region: where raised hands/arms would be (top 15%)
+        # - Head region: where the head typically is (15-35%)
+        # Note: These regions overlap at the boundary, which is intentional since
+        # we're comparing the density of raised arms vs the head itself
+        top_height = max(self.MIN_REGION_HEIGHT, int(h * self.TOP_REGION_PCT))
         top_region = image[y:y+top_height, x:x+w]
         
         head_start = int(h * self.HEAD_REGION_START_PCT)
         head_end = int(h * self.HEAD_REGION_END_PCT)
+        # Ensure head region has minimum height
+        if head_end - head_start < self.MIN_REGION_HEIGHT:
+            return False
         head_region = image[y+head_start:y+head_end, x:x+w]
         
         if top_region.size == 0 or head_region.size == 0:
@@ -78,8 +88,8 @@ class HandCounter:
         head_gray = cv2.cvtColor(head_region, cv2.COLOR_BGR2GRAY)
         
         # Apply edge detection with tuned thresholds
-        top_edges = cv2.Canny(top_gray, 30, 100)
-        head_edges = cv2.Canny(head_gray, 30, 100)
+        top_edges = cv2.Canny(top_gray, self.CANNY_THRESHOLD_LOW, self.CANNY_THRESHOLD_HIGH)
+        head_edges = cv2.Canny(head_gray, self.CANNY_THRESHOLD_LOW, self.CANNY_THRESHOLD_HIGH)
         
         # Calculate metrics for both regions
         top_edge_density = np.sum(top_edges > 0) / top_edges.size
