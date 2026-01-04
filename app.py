@@ -7,6 +7,8 @@ Provides a stateless web interface for counting people and raised hands in image
 from flask import Flask, render_template, request, jsonify
 import cv2
 import numpy as np
+import os
+import tempfile
 from io import BytesIO
 from PIL import Image
 import base64
@@ -28,6 +30,7 @@ def analyze_image():
     Analyze uploaded image for people and raised hands.
     Stateless endpoint - processes image in memory without storing anything.
     """
+    temp_path = None
     try:
         # Check if image was uploaded
         if 'image' not in request.files:
@@ -48,17 +51,16 @@ def analyze_image():
         if image is None:
             return jsonify({'error': 'Invalid image file'}), 400
         
-        # Save to temporary in-memory location for processing
-        temp_path = '/tmp/temp_upload.jpg'
+        # Create unique temporary file for processing
+        fd, temp_path = tempfile.mkstemp(suffix='.jpg')
+        os.close(fd)  # Close the file descriptor
+        
+        # Save to temporary file for processing
         cv2.imwrite(temp_path, image)
         
         # Process the image
         counter = HandCounter()
         results = counter.process_image(temp_path)
-        
-        # Clean up temp file
-        import os
-        os.remove(temp_path)
         
         # Return results as JSON
         return jsonify({
@@ -68,6 +70,11 @@ def analyze_image():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+    finally:
+        # Clean up temp file
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 @app.route('/health')
