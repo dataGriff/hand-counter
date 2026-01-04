@@ -183,8 +183,6 @@ The web application is designed to be completely stateless:
 - Uses OpenCV HOG detector for person detection with optimized parameters for crowded scenes
 - Implements non-maximum suppression (NMS) to filter overlapping detections
 - Applies confidence thresholding to reduce false positives
-
-- Uses OpenCV HOG detector for person detection
 - Employs edge detection and density analysis for raised hand detection
 - Processes images in BGR color space
 - Configurable detection parameters for different scenarios

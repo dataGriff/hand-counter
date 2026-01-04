@@ -94,7 +94,9 @@ class HandCounter:
             
             intersection = w * h
             union = areas[i] + areas[order[1:]] - intersection
-            iou = intersection / union
+            
+            # Handle division by zero - if union is 0, boxes are identical (IoU = 1.0)
+            iou = np.where(union > 0, intersection / union, 1.0)
             
             # Keep only boxes with IoU less than threshold
             order = order[np.where(iou <= overlap_threshold)[0] + 1]
