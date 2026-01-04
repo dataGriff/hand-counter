@@ -42,9 +42,11 @@ def annotate_image(image, detections):
         cv2.rectangle(annotated, (x, y), (x + w, y + h), box_color, 3)
         
         # Calculate marker position (top-right corner of bounding box)
-        marker_x = x + w - 40
-        marker_y = y + 40
-        marker_radius = 25
+        # Use relative positioning based on bounding box size
+        marker_radius = min(25, min(w, h) // 6)
+        marker_offset = max(marker_radius + 10, min(40, w // 4))
+        marker_x = x + w - marker_offset
+        marker_y = y + marker_offset
         
         if hands_raised:
             # Draw green circle background

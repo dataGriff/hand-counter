@@ -150,7 +150,7 @@ class HandCounter:
             
             # Store detection details (convert numpy types to Python native types)
             detections.append({
-                'bbox': [int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])],
+                'bbox': bbox.tolist() if hasattr(bbox, 'tolist') else list(bbox),
                 'hands_raised': bool(hands_raised)
             })
         
