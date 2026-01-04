@@ -13,6 +13,25 @@ from pathlib import Path
 class HandCounter:
     """Counts people and raised hands in images using pose estimation."""
     
+    # Hand detection heuristic region definitions
+    TOP_REGION_PCT = 0.15  # Top 15% of bbox where raised hands would be
+    HEAD_REGION_START_PCT = 0.15  # Start of head region (15%)
+    HEAD_REGION_END_PCT = 0.35  # End of head region (35%)
+    
+    # Edge detection parameters
+    CANNY_THRESHOLD_LOW = 30  # Lower threshold for Canny edge detection
+    CANNY_THRESHOLD_HIGH = 100  # Upper threshold for Canny edge detection
+    
+    # Thresholds for hand detection
+    MIN_EDGE_DENSITY = 0.008  # Minimum edge density to indicate presence of content
+    MAX_BRIGHTNESS = 220  # Maximum mean brightness (below this = has content, not background)
+    RATIO_THRESHOLD = 0.75  # Threshold for edge and variance ratios
+    
+    # Safety thresholds to avoid division by zero
+    MIN_HEAD_EDGE_DENSITY = 0.001
+    MIN_HEAD_VARIANCE = 1
+    MIN_REGION_HEIGHT = 1  # Minimum height for a region to be valid
+    
     def __init__(self):
         """Initialize OpenCV DNN with a pre-trained person detection model."""
         # For simplicity, we'll use OpenCV's HOG detector and simple heuristics
@@ -22,7 +41,10 @@ class HandCounter:
     def detect_raised_hands_heuristic(self, image, bbox):
         """
         Heuristic method to detect if hands are raised in a bounding box.
-        Uses color and position analysis in the upper portion of the detected person.
+        
+        Compares edge density and variance in the top region (where raised hands/arms
+        would be) versus the head region. When hands are raised, the top region has
+        thinner, more spread out content (arms/hands) compared to the denser head region.
         
         Args:
             image: The full image (BGR format)
@@ -33,26 +55,68 @@ class HandCounter:
         """
         x, y, w, h = bbox
         
-        # Check if the person's upper body area has significant motion/presence
-        # This is a simplified heuristic that checks the upper 40% of the bounding box
-        upper_region_height = int(h * 0.4)
-        upper_region = image[y:y+upper_region_height, x:x+w]
+        # Ensure bbox is within image bounds
+        img_h, img_w = image.shape[:2]
+        x = max(0, x)
+        y = max(0, y)
+        w = min(w, img_w - x)
+        h = min(h, img_h - y)
         
-        if upper_region.size == 0:
+        if w <= 0 or h <= 0:
             return False
         
-        # Convert to grayscale for edge detection
-        gray = cv2.cvtColor(upper_region, cv2.COLOR_BGR2GRAY)
+        # Define two regions for comparison:
+        # - Top region: where raised hands/arms would be (top 15%)
+        # - Head region: where the head typically is (15-35%)
+        # Note: These regions overlap at the boundary, which is intentional since
+        # we're comparing the density of raised arms vs the head itself
+        top_height = max(self.MIN_REGION_HEIGHT, int(h * self.TOP_REGION_PCT))
+        top_region = image[y:y+top_height, x:x+w]
         
-        # Apply edge detection in the upper region
-        edges = cv2.Canny(gray, 50, 150)
+        head_start = int(h * self.HEAD_REGION_START_PCT)
+        head_end = int(h * self.HEAD_REGION_END_PCT)
+        # Ensure head region has minimum height
+        if head_end - head_start < self.MIN_REGION_HEIGHT:
+            return False
+        head_region = image[y+head_start:y+head_end, x:x+w]
         
-        # Calculate the density of edges in the upper region
-        edge_density = np.sum(edges > 0) / edges.size
+        if top_region.size == 0 or head_region.size == 0:
+            return False
         
-        # If there's significant edge density in upper region, likely hands are raised
-        # This is a simple heuristic - adjust threshold as needed
-        return edge_density > 0.05
+        # Convert to grayscale
+        top_gray = cv2.cvtColor(top_region, cv2.COLOR_BGR2GRAY)
+        head_gray = cv2.cvtColor(head_region, cv2.COLOR_BGR2GRAY)
+        
+        # Apply edge detection with tuned thresholds
+        top_edges = cv2.Canny(top_gray, self.CANNY_THRESHOLD_LOW, self.CANNY_THRESHOLD_HIGH)
+        head_edges = cv2.Canny(head_gray, self.CANNY_THRESHOLD_LOW, self.CANNY_THRESHOLD_HIGH)
+        
+        # Calculate metrics for both regions
+        top_edge_density = np.sum(top_edges > 0) / top_edges.size
+        head_edge_density = np.sum(head_edges > 0) / head_edges.size
+        top_variance = np.var(top_gray)
+        head_variance = np.var(head_gray)
+        top_mean = np.mean(top_gray)
+        
+        # Avoid division by zero
+        if head_edge_density < self.MIN_HEAD_EDGE_DENSITY or head_variance < self.MIN_HEAD_VARIANCE:
+            return False
+        
+        # Calculate ratios
+        edge_ratio = top_edge_density / head_edge_density
+        variance_ratio = top_variance / head_variance
+        
+        # Decision logic:
+        # When hands are raised, the top region has thinner content (arms/hands)
+        # compared to the dense head region, resulting in lower ratios.
+        # Both conditions must be met to reduce false positives.
+        has_min_activity = top_edge_density > self.MIN_EDGE_DENSITY and top_mean < self.MAX_BRIGHTNESS
+        
+        return (
+            has_min_activity and
+            edge_ratio < self.RATIO_THRESHOLD and
+            variance_ratio < self.RATIO_THRESHOLD
+        )
     
     def non_max_suppression(self, boxes, weights, overlap_threshold=0.35):
         """
