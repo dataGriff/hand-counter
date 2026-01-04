@@ -7,6 +7,7 @@ Creates test images and verifies the functionality.
 import cv2
 import numpy as np
 import sys
+import tempfile
 from pathlib import Path
 
 # Add the current directory to path for imports
@@ -77,31 +78,35 @@ def run_tests():
     counter = HandCounter()
     test_results = []
     
-    # Test 1: Image with person
-    print("\n[Test 1] Image with person (hands raised)...")
-    test_file = create_test_image_with_person('/tmp/test_person_raised.jpg')
-    try:
-        result = counter.process_image(test_file)
-        print(f"  - People detected: {result['total_people']}")
-        print(f"  - Hands raised: {result['hands_raised']}")
-        print(f"  - Proportion: {result['hands_raised_proportion']:.1f}%")
-        test_results.append(("Person detection", result['total_people'] >= 0))
-    except Exception as e:
-        print(f"  ERROR: {e}")
-        test_results.append(("Person detection", False))
-    
-    # Test 2: Empty scene
-    print("\n[Test 2] Image with no people...")
-    test_file = create_test_image_no_person('/tmp/test_empty.jpg')
-    try:
-        result = counter.process_image(test_file)
-        print(f"  - People detected: {result['total_people']}")
-        print(f"  - Hands raised: {result['hands_raised']}")
-        success = result['total_people'] == 0
-        test_results.append(("Empty scene detection", success))
-    except Exception as e:
-        print(f"  ERROR: {e}")
-        test_results.append(("Empty scene detection", False))
+    # Use temporary directory for cross-platform compatibility
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Test 1: Image with person
+        print("\n[Test 1] Image with person (hands raised)...")
+        test_file = create_test_image_with_person(str(temp_path / 'test_person_raised.jpg'))
+        try:
+            result = counter.process_image(test_file)
+            print(f"  - People detected: {result['total_people']}")
+            print(f"  - Hands raised: {result['hands_raised']}")
+            print(f"  - Proportion: {result['hands_raised_proportion']:.1f}%")
+            test_results.append(("Person detection", result['total_people'] >= 0))
+        except Exception as e:
+            print(f"  ERROR: {e}")
+            test_results.append(("Person detection", False))
+        
+        # Test 2: Empty scene
+        print("\n[Test 2] Image with no people...")
+        test_file = create_test_image_no_person(str(temp_path / 'test_empty.jpg'))
+        try:
+            result = counter.process_image(test_file)
+            print(f"  - People detected: {result['total_people']}")
+            print(f"  - Hands raised: {result['hands_raised']}")
+            success = result['total_people'] == 0
+            test_results.append(("Empty scene detection", success))
+        except Exception as e:
+            print(f"  ERROR: {e}")
+            test_results.append(("Empty scene detection", False))
     
     # Test 3: Verify proportions calculation
     print("\n[Test 3] Proportion calculation...")

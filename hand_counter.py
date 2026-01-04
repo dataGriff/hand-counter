@@ -98,23 +98,6 @@ class HandCounter:
             'hands_raised_proportion': hands_raised_proportion,
             'hands_down_proportion': hands_down_proportion
         }
-    
-    def process_image_multi_person(self, image_path):
-        """
-        Alias for process_image since both handle multiple people.
-        Kept for backward compatibility with CLI flag.
-        
-        Args:
-            image_path: Path to the image file
-            
-        Returns:
-            dict: Results containing counts and proportions
-        """
-        return self.process_image(image_path)
-    
-    def __del__(self):
-        """Clean up resources."""
-        pass
 
 
 def print_results(results):
