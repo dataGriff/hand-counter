@@ -54,6 +54,55 @@ class HandCounter:
         # This is a simple heuristic - adjust threshold as needed
         return edge_density > 0.05
     
+    def non_max_suppression(self, boxes, weights, overlap_threshold=0.35):
+        """
+        Apply non-maximum suppression to remove overlapping detections.
+        
+        Args:
+            boxes: Array of bounding boxes (x, y, w, h)
+            weights: Detection confidence weights
+            overlap_threshold: IoU threshold for suppression
+            
+        Returns:
+            tuple: Filtered boxes and weights
+        """
+        if len(boxes) == 0:
+            return np.array([]), np.array([])
+        
+        # Convert boxes to (x1, y1, x2, y2) format
+        x1 = boxes[:, 0]
+        y1 = boxes[:, 1]
+        x2 = boxes[:, 0] + boxes[:, 2]
+        y2 = boxes[:, 1] + boxes[:, 3]
+        
+        areas = boxes[:, 2] * boxes[:, 3]
+        order = weights.flatten().argsort()[::-1]
+        
+        keep = []
+        while len(order) > 0:
+            i = order[0]
+            keep.append(i)
+            
+            # Compute IoU with remaining boxes
+            xx1 = np.maximum(x1[i], x1[order[1:]])
+            yy1 = np.maximum(y1[i], y1[order[1:]])
+            xx2 = np.minimum(x2[i], x2[order[1:]])
+            yy2 = np.minimum(y2[i], y2[order[1:]])
+            
+            w = np.maximum(0, xx2 - xx1)
+            h = np.maximum(0, yy2 - yy1)
+            
+            intersection = w * h
+            union = areas[i] + areas[order[1:]] - intersection
+            
+            # Handle division by zero - if union is 0, boxes are identical (IoU = 1.0)
+            iou = np.where(union > 0, intersection / union, 1.0)
+            
+            # Keep only boxes with IoU less than threshold
+            order = order[np.where(iou <= overlap_threshold)[0] + 1]
+        
+        return boxes[keep], weights[keep]
+    
     def process_image(self, image_path):
         """
         Process an image to count people and raised hands.
@@ -69,14 +118,25 @@ class HandCounter:
         if image is None:
             raise ValueError(f"Could not load image: {image_path}")
         
-        # Detect people in the image
+        # Detect people in the image with more sensitive parameters
         boxes, weights = self.hog.detectMultiScale(
             image, 
-            winStride=(4, 4),
-            padding=(8, 8), 
-            scale=1.05,
-            hitThreshold=0
+            winStride=(4, 4),      # Keep standard for balance between speed and accuracy
+            padding=(4, 4),         # Reduced from (8, 8) for less padding
+            scale=1.03,             # Reduced from 1.05 for better multi-scale detection
+            hitThreshold=-0.3       # Lowered from 0 to detect more candidates while reducing false positives
         )
+        
+        # Filter out low-confidence detections
+        if len(boxes) > 0:
+            confidence_threshold = 0.3
+            mask = weights.flatten() > confidence_threshold
+            boxes = boxes[mask]
+            weights = weights[mask]
+        
+        # Apply non-maximum suppression to remove overlapping detections
+        if len(boxes) > 0:
+            boxes, weights = self.non_max_suppression(boxes, weights)
         
         total_people = len(boxes)
         hands_raised_count = 0

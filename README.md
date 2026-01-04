@@ -174,12 +174,15 @@ The web application is designed to be completely stateless:
 - Detection accuracy depends on image quality, lighting, and camera angle
 - People must be clearly visible with their upper body shown
 - Works best with frontal or semi-frontal views
-- Very crowded scenes may reduce accuracy
+- In very crowded scenes with heavy occlusion, some people may not be detected
 - The hand-raising detection uses heuristic methods that work well for typical scenarios but may have limitations with unusual poses or clothing
+- The HOG detector is optimized for real photographs and may have varying results with synthetic/drawn images
 
 ## Technical Details
 
-- Uses OpenCV HOG detector for person detection
+- Uses OpenCV HOG detector for person detection with optimized parameters for crowded scenes
+- Implements non-maximum suppression (NMS) to filter overlapping detections
+- Applies confidence thresholding to reduce false positives
 - Employs edge detection and density analysis for raised hand detection
 - Processes images in BGR color space
 - Configurable detection parameters for different scenarios
